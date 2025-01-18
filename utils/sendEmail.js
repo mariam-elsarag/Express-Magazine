@@ -4,7 +4,7 @@ import fs from "fs";
 class Email {
   constructor(user, url, otpCode) {
     this.to = user.email;
-    this.firstName = user.full_name;
+    this.full_name = user.full_name;
     this.otpCode = otpCode;
     this.from = `Magazine <${process.env.EMAIL_FROM}>`;
     this.url = url;
@@ -21,7 +21,7 @@ class Email {
   }
   async sendResetEmail() {
     let template = fs.readFileSync(
-      "../views/email_template/resetPassword.html",
+      "./views/email_template/resetPassword.html",
       "utf-8"
     );
     const replacements = {

@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 const userSchema = new mongoose.Schema({
   full_name: {
@@ -63,9 +64,8 @@ const userSchema = new mongoose.Schema({
     default: null,
     select: false,
   },
-  is_otp_verified: {
-    type: Boolean,
-    default: false,
+  otp_verified_token: {
+    type: String,
     select: false,
   },
   otp: {
@@ -90,6 +90,42 @@ userSchema.methods.compareUserPassword = async function (
   userPassword
 ) {
   return await bcrypt.compare(candidatePassword, userPassword);
+};
+
+userSchema.methodscheckChangePasswordAfterJWT = function (jwtTimestamp) {
+  if (!this.password_changed_at) {
+    return false;
+  }
+  const passwordChangedTime = Math.floor(
+    this.password_changed_at.getTime() / 1000
+  );
+  return passwordChangedTime > jwtTimestamp;
+};
+// for generating otp
+userSchema.methods.generateOTP = async function (expire = 10, user) {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const hashedOtp = await bcrypt.hash(otp, 12);
+  user.otp = hashedOtp;
+  user.otp_expired_at = Date.now() + expire * 60 * 1000;
+  await user.save({ validateBeforeSave: false });
+  return otp;
+};
+userSchema.methods.verifyOTP = async function (candidateOTP, savedOTP) {
+  return await bcrypt.compare(candidateOTP, savedOTP);
+};
+
+//for one time token
+userSchema.methods.generateToken = function (email) {
+  return jwt.sign({ email }, process.env.JWT_SECRET_KEY_forget_password, {
+    expiresIn: "1h",
+  });
+};
+userSchema.statics.verifyForgetPasswordToken = async function (token) {
+  const decoded = await jwt.verify(
+    token,
+    process.env.JWT_SECRET_KEY_forget_password
+  );
+  return decoded;
 };
 const User = mongoose.model("User", userSchema);
 export default User;
