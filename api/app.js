@@ -12,14 +12,12 @@ import mongoSanitize from "express-mongo-sanitize";
 // for handle global errors
 import globalErrors from "../middleware/globalErrors.js";
 import appErrors from "../utils/appErrors.js";
+
+// routes
 import authRoutes from "./auth/auth.route.js";
+import categoryRoutes from "./category/category.route.js";
 
 const app = express();
-
-const DB = process.env.DATABASE.replace(
-  "<db_password>",
-  process.env.DATABASE_PASSWORD
-);
 
 // body parser
 app.use(express.json());
@@ -34,6 +32,7 @@ app.use(cors());
 // handle route
 
 app.use("/api/auth", authRoutes);
+app.use("/api/category", categoryRoutes);
 
 // for handle wrong routes
 app.all("*", (req, res, next) => {

@@ -11,8 +11,22 @@ const handleExpireJWTError = () => {
 // Database errors
 // unique data
 const handleDublicateDbData = (err) => {
-  if (err.keyPattern.email) {
-    return new appErrors({ email: "Email already exists" }, 400);
+  if (err.code === 11000) {
+    let field = "";
+
+    if (err.keyPattern.title) {
+      field = "title";
+    }
+    if (err.keyPattern.email) {
+      field = "email";
+    }
+
+    return new appErrors(
+      `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`,
+      400
+    );
+  } else {
+    return new appErrors(err.message, 400);
   }
 };
 
@@ -36,7 +50,7 @@ const handleProducationErrors = (err, res) => {
   if (err.isOperational) {
     res.status(err.statusCode).json({ errors: err.message });
   } else {
-    res.status(err.statusCode).json({ errors: err });
+    res.status(err.statusCode).json({ errors: "something went wrong" });
   }
 };
 // for development errors
@@ -52,12 +66,12 @@ const globalErrors = (err, req, res, next) => {
   if (process.env.NODE_ENV === "production") {
     let error = err;
 
-    if (error.code === 11000) {
-      error = handleDublicateDbData(error);
+    if (err.code === 11000 || error?.message?.includes("unique")) {
+      error = handleDublicateDbData(err);
     }
     if (
-      error.name === "JsonWebTokenError" ||
-      error.name === "invalid signature"
+      error?.name === "JsonWebTokenError" ||
+      error?.name === "invalid signature"
     ) {
       error = handleJWTError();
     }
@@ -67,6 +81,7 @@ const globalErrors = (err, req, res, next) => {
     ) {
       error = handleValidationError(error, res);
     }
+
     if (error.name === "TokenExpiredError") error = handleExpireJWTError();
     handleProducationErrors(error, res);
   } else {

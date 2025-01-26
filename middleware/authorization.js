@@ -13,7 +13,7 @@ class Authorization {
     this.secret = secret;
   }
 
-  static verifyToken = async (token) => {
+  verifyToken = async (token) => {
     const decoded = jwt.verify(token, this.secret);
     if (!decoded) {
       throw new AppError("Unauthorized: Access is denied", 401);
@@ -32,7 +32,7 @@ class Authorization {
   };
 
   protect = asyncWrapper(async (req, res, next) => {
-    const token = extractAuthorization(req);
+    const token = await extractAuthorization(req);
 
     if (this.requireAuthentication && !token) {
       return next(new AppError("Unauthorized: Access is denied", 401));
@@ -40,7 +40,7 @@ class Authorization {
 
     if (token) {
       try {
-        const user = await Authorization.verifyToken(token);
+        const user = await this.verifyToken(token);
         req.user = user;
         return next();
       } catch (err) {
@@ -51,7 +51,7 @@ class Authorization {
     next();
   });
 
-  static authorized = (...roles) => {
+  authorized = (...roles) => {
     return (req, res, next) => {
       if (!roles.includes(req.user.role)) {
         return next(

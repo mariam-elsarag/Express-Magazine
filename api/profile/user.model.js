@@ -92,7 +92,7 @@ userSchema.methods.compareUserPassword = async function (
   return await bcrypt.compare(candidatePassword, userPassword);
 };
 
-userSchema.methodscheckChangePasswordAfterJWT = function (jwtTimestamp) {
+userSchema.methods.checkChangePasswordAfterJWT = function (jwtTimestamp) {
   if (!this.password_changed_at) {
     return false;
   }
