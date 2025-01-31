@@ -30,8 +30,30 @@ const postSchema = new mongoose.Schema(
       required: [true, "Category is required"],
     },
   },
-  { timeseries: true }
+  {
+    timestamps: true,
+    toJSON: {
+      virtuals: true,
+      transform: (doc, ret) => {
+        ret.post_id = ret._id;
+        delete ret._id;
+        delete ret.id;
+        delete ret.__v;
+      },
+    },
+  }
 );
+// postSchema.pre("save", function (next) {
+//   this.populate({
+//     path: "user",
+//     select: "full_name avatar",
+//   });
+//   this.populate({
+//     path: "category",
+//     select: "title",
+//   });
+//   next();
+// });
 const Post = mongoose.model("Post", postSchema);
 
 export default Post;
