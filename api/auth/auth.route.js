@@ -23,9 +23,9 @@ authRoutes.get(
 
 authRoutes.get("/google/callback", googleAuthorization);
 
-authRoutes.post("/login", upload.none(), login);
-authRoutes.post("/register", upload.none(), register);
-authRoutes.patch("/forget-password", upload.none(), forgetPassword);
-authRoutes.patch("/verify", upload.none(), verifyOtp);
-authRoutes.patch("/reset-password", upload.none(), resetPassword);
+authRoutes.route("/login").post(upload.none(), login);
+authRoutes.route("/register").post(upload.none(), register);
+authRoutes.route("/forget-password").patch(upload.none(), forgetPassword);
+authRoutes.route("/verify").patch(upload.none(), verifyOtp);
+authRoutes.route("/reset-password").patch(upload.none(), resetPassword);
 export default authRoutes;

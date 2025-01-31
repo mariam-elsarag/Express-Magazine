@@ -3,10 +3,13 @@ import { generateTokens } from "../../utils/generateTokens.js";
 
 class AuthSerializer {
   static serializeUserRegister(user) {
+    (user.avatar = `https://avatar.iran.liara.run/username?username=${user.full_name}`),
+      user.save({ validateBeforeSave: false });
     return {
       full_name: user.full_name,
       email: user.email,
       role: user.role,
+      avatar: `https://avatar.iran.liara.run/username?username=${user.full_name}`,
     };
   }
 
