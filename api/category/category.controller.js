@@ -28,7 +28,7 @@ export const createNewCategory = asyncWraper(async (req, res, next) => {
       new appErrors("Category with the same title already exists", 409)
     );
   }
-  filterData.icon = await uploadImage(req, "/mediafiles/categories", icon);
+  filterData.icon = await uploadImage(req, "/mediafiles/categories", "icon");
   try {
     const category = await Category.create(filterData);
     res.status(201).json(category);
@@ -50,11 +50,9 @@ export const getAllCategories = asyncWraper(async (req, res, next) => {
 
 // get paginated categories
 export const getAllPaginatedCategories = asyncWraper(async (req, res, next) => {
-  const features = await new ApiFeature(Category.find(), req.query)
-    .paginate(8)
-    .getPaginations(Category, req);
-
-  res.status(200).json(features);
+  const features = await new ApiFeature(Category.find(), req.query).paginate(8);
+  const categories = await features.getPaginations(Category, req);
+  res.status(200).json(categories);
 });
 //update category
 
@@ -79,7 +77,7 @@ export const updateCategory = asyncWraper(async (req, res, next) => {
         return next(new appErrors("Failed to delete category icon", 500));
       }
 
-      category.icon = await uploadImage(req, "/mediafiles/categories", icon);
+      category.icon = await uploadImage(req, "/mediafiles/categories", "icon");
     }
 
     if (filterData?.title) {

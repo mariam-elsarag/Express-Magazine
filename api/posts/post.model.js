@@ -24,6 +24,19 @@ const postSchema = new mongoose.Schema(
       required: [true, "Image is required"],
     },
     tags: [{ type: String }],
+    views: {
+      type: Number,
+      default: 0,
+    },
+    rating_quentity: {
+      type: Number,
+      default: 0,
+    },
+    rating_average: {
+      type: Number,
+      default: 0,
+      set: (val) => Math.round(val * 10) / 10,
+    },
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",

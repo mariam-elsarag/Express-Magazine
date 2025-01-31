@@ -4,6 +4,7 @@ import appErrors from "../../utils/appErrors.js";
 import asyncWraper from "../../utils/asyncWraper.js";
 import serializeBody from "../../utils/serializeBody.js";
 import uploadImage from "../../utils/uploadImage.js";
+import ApiFeature from "../../utils/apiFeatures.js";
 
 // create new post
 export const createPost = asyncWraper(async (req, res, next) => {
@@ -26,4 +27,48 @@ export const createPost = asyncWraper(async (req, res, next) => {
 });
 
 // update post
-export const updatePost = asyncWraper(async (req, res, next) => {});
+export const updatePost = asyncWraper(async (req, res, next) => {
+  const allowedFields = ["title", "description", "tags", "summary", "category"];
+  const filterData = serializeBody(req.body, next, [], allowedFields);
+  if (!filterData) {
+    return;
+  }
+  const { id } = req.params;
+  const post = await Post.findById(id);
+  if (!post) return next(new appErrors("Post not found", 404));
+  if (req.file) {
+    filterData.image = await uploadImage(req, "/mediafiles/posts", "image");
+  }
+  Object.keys(filterData).forEach((key) => {
+    post[key] = filterData[key];
+  });
+  const updatedPost = await post.save();
+  res.status(200).json(updatedPost);
+});
+
+// get all users posts
+export const getUsersPosts = asyncWraper(async (req, res, next) => {
+  const user = req.user._id;
+  console.log(user, "user");
+  const features = new ApiFeature(
+    Post.find({ user }).populate({ path: "user", select: "avatar full_name" }),
+    req.query
+  )
+    .paginate(12)
+    .sort("createdAt:acs");
+  const posts = await features.getPaginations(Post, req);
+  const postData = {
+    user: {
+      avatar: posts.user.avatar,
+      full_name: posts.user.full_name,
+      user_id: posts.user.user_id,
+    },
+    title: posts.title,
+    summary: posts.summary,
+    image: posts.image,
+    createdAt: posts.createdAt,
+    views: posts.views,
+    rating: posts.rating_average,
+  };
+  res.status(200).json(postData);
+});

@@ -17,6 +17,7 @@ import appErrors from "../utils/appErrors.js";
 import authRoutes from "./auth/auth.route.js";
 import postRoutes from "./posts/post.route.js";
 import categoryRoutes from "./category/category.route.js";
+import profileRoutes from "./profile/user.route.js";
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use(cors());
 app.use("/api/auth", authRoutes);
 app.use("/api/category", categoryRoutes);
 app.use("/api/post", postRoutes);
+app.use("/api/user", profileRoutes);
 
 // for handle wrong routes
 app.all("*", (req, res, next) => {
