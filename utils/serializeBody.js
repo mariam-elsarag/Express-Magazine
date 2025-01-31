@@ -21,7 +21,8 @@ const serializeBody = (body, next, requiredFields = [], allowFields = []) => {
   });
 
   if (errors.length > 0) {
-    return next(new appErrors(errors, 400));
+    next(new appErrors(errors, 400));
+    return null;
   } else {
     return filter;
   }
