@@ -5,7 +5,13 @@ import Authorization from "../../middleware/authorization.js";
 import upload from "../../middleware/multer.js";
 
 // controllers
-import { createNewCategory } from "./category.controller.js";
+import {
+  createNewCategory,
+  deleteCategory,
+  getAllCategories,
+  getAllPaginatedCategories,
+  updateCategory,
+} from "./category.controller.js";
 
 const router = express.Router();
 
@@ -14,6 +20,12 @@ const requireAdmin = [authorization.protect, authorization.authorized("admin")];
 
 router
   .route("/")
-  .post(...requireAdmin, upload.single("icon"), createNewCategory);
-// router.use(authorization.protect(), authorization.authorized("admin"));
+  .post(...requireAdmin, upload.single("icon"), createNewCategory)
+  .get(getAllPaginatedCategories);
+router.route("/all").get(getAllCategories);
+router.use(...requireAdmin);
+router
+  .route("/:id")
+  .delete(deleteCategory)
+  .patch(upload.single("icon"), updateCategory);
 export default router;
