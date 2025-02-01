@@ -8,6 +8,9 @@ const handleExpireJWTError = () => {
   return new appErrors("Your token has expired!", 401);
 };
 
+const handleInvalidId = () => {
+  return new appErrors("Invalid ID", 400);
+};
 // Database errors
 // unique data
 const handleDublicateDbData = (err) => {
@@ -50,7 +53,7 @@ const handleProducationErrors = (err, res) => {
   if (err.isOperational) {
     res.status(err.statusCode).json({ errors: err.message });
   } else {
-    res.status(err.statusCode).json({ errors: "something went wrong" });
+    res.status(err.statusCode).json({ errors: err.message });
   }
 };
 // for development errors
@@ -65,7 +68,9 @@ const globalErrors = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   if (process.env.NODE_ENV === "production") {
     let error = err;
-
+    if (err.message.includes("Cast to ObjectId failed for value")) {
+      error = handleInvalidId();
+    }
     if (err.code === 11000 || error?.message?.includes("unique")) {
       error = handleDublicateDbData(err);
     }

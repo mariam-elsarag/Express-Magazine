@@ -1,14 +1,17 @@
 import express from "express";
+import multer from "multer";
 
 // middleware
 import Authorization from "../../middleware/authorization.js";
-import { getUsersPosts } from "../post/post.controller.js";
 
 const router = express.Router();
-
-// routes
 const authorization = new Authorization();
+const upload = multer();
 router.use(authorization.protect);
 
-router.route("/post").get(getUsersPosts);
+import { createPostRate } from "../rating/rating.controller.js";
+// for rate post
+
+router.route("/:id/rate").post(upload.none(), createPostRate);
+
 export default router;

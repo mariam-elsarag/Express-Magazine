@@ -15,7 +15,7 @@ import appErrors from "../utils/appErrors.js";
 
 // routes
 import authRoutes from "./auth/auth.route.js";
-import postRoutes from "./posts/post.route.js";
+import postRoutes from "./post/post.route.js";
 import categoryRoutes from "./category/category.route.js";
 import profileRoutes from "./profile/user.route.js";
 

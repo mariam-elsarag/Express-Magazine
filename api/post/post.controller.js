@@ -57,18 +57,28 @@ export const getUsersPosts = asyncWraper(async (req, res, next) => {
     .paginate(12)
     .sort("createdAt:acs");
   const posts = await features.getPaginations(Post, req);
-  const postData = {
+  posts.results = posts?.results?.map((post) => ({
     user: {
-      avatar: posts.user.avatar,
-      full_name: posts.user.full_name,
-      user_id: posts.user.user_id,
+      avatar: post.user.avatar,
+      full_name: post.user.full_name,
+      user_id: post.user._id,
     },
-    title: posts.title,
-    summary: posts.summary,
-    image: posts.image,
-    createdAt: posts.createdAt,
-    views: posts.views,
-    rating: posts.rating_average,
-  };
-  res.status(200).json(postData);
+    title: post.title,
+    image: post.image,
+    views: post.views,
+    rating: post.rating_average,
+    post_id: post._id,
+  }));
+
+  res.status(200).json(posts);
+});
+
+// view post
+export const viewPost = asyncWraper(async (req, res, next) => {
+  const { id } = req.params;
+  const post = await Post.findByIdAndUpdate(id, {
+    $inc: { views: 1 },
+  });
+  if (!post) return next(new appErrors("Post not found", 404));
+  res.status(200).json({ message: "Post updated" });
 });
