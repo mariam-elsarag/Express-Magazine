@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema(
         "Please enter a valid email address",
       ],
     },
-    googleId: { type: String, unique: true },
+    googleId: { type: String },
     role: {
       type: String,
       enum: ["user", "admin"],

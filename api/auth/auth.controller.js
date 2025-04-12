@@ -5,12 +5,28 @@ import serializeBody from "../../utils/serializeBody.js";
 import asyncWraper from "./../../utils/asyncWraper.js";
 import appErrors from "../../utils/appErrors.js";
 import CRUDService from "../../service/CRUDService.js";
-import AuthSerializer from "./auth.serializer.js";
+
 import Email from "./../../utils/sendEmail.js";
 
 // for google
 import passport from "../../config/passport.js";
 import extractAuthorization from "../../utils/extractHeader.js";
+
+// check if user exist
+const checkUserExist = async (userModel, email, next) => {
+  try {
+    const userData = await userModel
+      .findOne({ email })
+      .select("email full_name otp otp_expired_at otp_verified_token password");
+    if (!userData) {
+      return next(new appErrors("User not found", 404));
+    }
+    return userData;
+  } catch (error) {
+    console.log("error form check user in auth", error);
+    return next(new appErrors("User not found", 404));
+  }
+};
 
 // login
 export const login = asyncWraper(async (req, res, next) => {
@@ -21,27 +37,45 @@ export const login = asyncWraper(async (req, res, next) => {
   );
 
   if (!user) {
-    return AuthSerializer.serializeError("user_not_found", next);
+    return next(new appErrors("User not found", 404));
   }
 
   // google user
   if (user && !user.password) {
-    return AuthSerializer.serializeError("wrong_credentials", next);
+    return next(new appErrors("Wrong credentials", 401));
   }
   if (
     user &&
     !(await user.compareUserPassword(filterdData.password, user.password))
   ) {
-    return AuthSerializer.serializeError("wrong_credentials", next);
+    return next(new appErrors("Wrong credentials", 401));
   }
-  res.status(200).json(AuthSerializer.serializeUserLogin(user, res));
+  const token = await generateTokens(user, res);
+  res.status(200).json({
+    userId: user._id,
+    full_name: user.full_name,
+    email: user.email,
+    role: user.role,
+    avatar: user.avatar,
+    token: token,
+  });
 });
 // register
+const serializeUserRegister = (user) => {
+  (user.avatar = `https://avatar.iran.liara.run/username?username=${user.full_name}`),
+    user.save({ validateBeforeSave: false });
+  return {
+    full_name: user.full_name,
+    email: user.email,
+    role: user.role,
+    avatar: `https://avatar.iran.liara.run/username?username=${user.full_name}`,
+  };
+};
 export const register = new CRUDService(
   User,
   ["full_name", "email", "password"],
   [],
-  AuthSerializer.serializeUserRegister
+  serializeUserRegister
 ).create;
 
 // google authorization
@@ -65,11 +99,7 @@ export const googleAuthorization = (req, res, next) => {
 export const forgetPassword = asyncWraper(async (req, res, next) => {
   const requiredFields = ["email"];
   const filterdData = serializeBody(req.body, next, requiredFields);
-  const user = await AuthSerializer.serializeUserExist(
-    User,
-    filterdData.email,
-    next
-  );
+  const user = await checkUserExist(User, filterdData.email, next);
 
   if (!user) return;
   try {
@@ -81,7 +111,12 @@ export const forgetPassword = asyncWraper(async (req, res, next) => {
   } catch (err) {
     user.otp = undefined;
     user.otp_expired_at = undefined;
-    AuthSerializer.serializeError("sending_email", next);
+    return next(
+      new appErrors(
+        "There was an error while sending the email. Try again later",
+        500
+      )
+    );
   }
 });
 
@@ -89,23 +124,19 @@ export const forgetPassword = asyncWraper(async (req, res, next) => {
 export const verifyOtp = asyncWraper(async (req, res, next) => {
   const requiredFields = ["email", "otp"];
   const filterdData = serializeBody(req.body, next, requiredFields);
-  const user = await AuthSerializer.serializeUserExist(
-    User,
-    filterdData.email,
-    next
-  );
+  const user = await checkUserExist(User, filterdData.email, next);
 
   if (!user) return;
   if (!user.otp) {
-    return AuthSerializer.serializeError("invalid_otp", next);
+    return next(new appErrors("Invalid OTP", 401));
   }
   const isVerified = await user.verifyOTP(filterdData.otp, user.otp);
   if (!isVerified) {
-    return AuthSerializer.serializeError("invalid_otp", next);
+    return next(new appErrors("Invalid OTP", 401));
   }
 
   if (user.otp_expired_at.getTime() < Date.now()) {
-    return AuthSerializer.serializeError("otp_expired", next);
+    return next(new appErrors("OTP expired"));
   }
   try {
     const token = await user.generateToken(filterdData.email);
@@ -118,7 +149,7 @@ export const verifyOtp = asyncWraper(async (req, res, next) => {
       token: token,
     });
   } catch (err) {
-    return AuthSerializer.serializeError("invalid_otp", next);
+    return next(new appErrors("Invalid OTP", 401));
   }
 });
 
@@ -127,23 +158,19 @@ export const resetPassword = asyncWraper(async (req, res, next) => {
   const filterdData = serializeBody(req.body, next, requiredFields);
   const token = extractAuthorization(req);
   if (!token || token == "null") {
-    return AuthSerializer.serializeError("required_token", next);
+    return next(new appErrors("Token required", 401));
   }
   const decode = await User.verifyForgetPasswordToken(token);
 
-  const user = await AuthSerializer.serializeUserExist(
-    User,
-    decode.email,
-    next
-  );
+  const user = await checkUserExist(User, decode.email, next);
   if (!user) return;
 
   if (!user.otp_verified_token) {
-    return AuthSerializer.serializeError("otp_not_verified", next);
+    return next(new appErrors("OTP not verified", 401));
   }
 
   if (user.otp_verified_token !== token) {
-    return AuthSerializer.serializeError("otp_not_verified", next);
+    return next(new appErrors("OTP not verified", 401));
   }
   user.otp_verified_token = undefined;
   user.password = filterdData.password;

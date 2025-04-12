@@ -50,7 +50,7 @@ class CRUDService {
   });
   getAll = asyncWraper(async (req, res, next) => {
     const docs = await this.model.find();
-    res.status(200).json(this.serializeData(doc));
+    res.status(200).json(this.serializeData(docs));
   });
 }
 export default CRUDService;
