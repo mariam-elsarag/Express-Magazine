@@ -3,7 +3,7 @@ import Post from "./post.model.js";
 import appErrors from "../../utils/appErrors.js";
 import asyncWraper from "../../utils/asyncWraper.js";
 import serializeBody from "../../utils/serializeBody.js";
-import uploadImage from "../../utils/uploadImage.js";
+import { uploadSingleImage } from "../../utils/uploadImage.js";
 import ApiFeature from "../../utils/apiFeatures.js";
 
 // create new post
@@ -20,10 +20,33 @@ export const createPost = asyncWraper(async (req, res, next) => {
   if (!req.file) {
     return next(new appErrors([{ image: "Image is required" }], 400));
   } else {
-    filterData.image = await uploadImage(req, "/mediafiles/posts", "image");
+    try {
+      filterData.image = await uploadSingleImage(
+        req,
+        "/mediafiles/posts",
+        "image"
+      );
+    } catch (err) {
+      throw err;
+    }
   }
   const post = await Post.create(filterData);
-  res.status(201).json(post);
+  res.status(201).json({
+    post_id: post._id,
+    user: {
+      avatar: post.user.avatar,
+      full_name: post.user.full_name,
+      user_id: post.user._id,
+    },
+    category: {
+      title: post.category.title,
+    },
+    title: post.title,
+    image: post.image,
+    views: post.views,
+    rating: post.rating_average,
+    tags: post.tags?.length > 0 ? post.tags : null,
+  });
 });
 
 // update post
@@ -44,33 +67,6 @@ export const updatePost = asyncWraper(async (req, res, next) => {
   });
   const updatedPost = await post.save();
   res.status(200).json(updatedPost);
-});
-
-// get all users posts
-export const getUsersPosts = asyncWraper(async (req, res, next) => {
-  const user = req.user._id;
-  console.log(user, "user");
-  const features = new ApiFeature(
-    Post.find({ user }).populate({ path: "user", select: "avatar full_name" }),
-    req.query
-  )
-    .paginate(12)
-    .sort("createdAt:acs");
-  const posts = await features.getPaginations(Post, req);
-  posts.results = posts?.results?.map((post) => ({
-    user: {
-      avatar: post.user.avatar,
-      full_name: post.user.full_name,
-      user_id: post.user._id,
-    },
-    title: post.title,
-    image: post.image,
-    views: post.views,
-    rating: post.rating_average,
-    post_id: post._id,
-  }));
-
-  res.status(200).json(posts);
 });
 
 // view post

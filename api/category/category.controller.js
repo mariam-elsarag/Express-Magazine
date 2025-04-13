@@ -4,7 +4,7 @@ import appErrors from "../../utils/appErrors.js";
 import asyncWraper from "../../utils/asyncWraper.js";
 import serializeBody from "../../utils/serializeBody.js";
 import ApiFeature from "../../utils/apiFeatures.js";
-import uploadImage from "../../utils/uploadImage.js";
+import { uploadSingleImage } from "../../utils/uploadImage.js";
 
 // config
 import deleteOneFromCloudinary from "../../utils/deleteOneFromCloudinary.js";
@@ -28,7 +28,11 @@ export const createNewCategory = asyncWraper(async (req, res, next) => {
       new appErrors("Category with the same title already exists", 409)
     );
   }
-  filterData.icon = await uploadImage(req, "/mediafiles/categories", "icon");
+  filterData.icon = await uploadSingleImage(
+    req,
+    "/mediafiles/categories",
+    "icon"
+  );
   try {
     const category = await Category.create(filterData);
     res.status(201).json(category);
@@ -77,7 +81,11 @@ export const updateCategory = asyncWraper(async (req, res, next) => {
         return next(new appErrors("Failed to delete category icon", 500));
       }
 
-      category.icon = await uploadImage(req, "/mediafiles/categories", "icon");
+      category.icon = await uploadSingleImage(
+        req,
+        "/mediafiles/categories",
+        "icon"
+      );
     }
 
     if (filterData?.title) {

@@ -1,97 +1,119 @@
 import appErrors from "../utils/appErrors.js";
 
-// jwt errors
-const handleJWTError = () => {
-  return new appErrors("Invalid token", 401);
-};
-const handleExpireJWTError = () => {
-  return new appErrors("Your token has expired!", 401);
-};
+// JWT error handlers
+const handleJWTError = () => new appErrors("Invalid token", 401);
+const handleExpireJWTError = () =>
+  new appErrors("Your token has expired!", 401);
 
-const handleInvalidId = () => {
-  return new appErrors("Invalid ID", 400);
-};
-// Database errors
-// unique data
+// Invalid MongoDB ID
+const handleInvalidId = () => new appErrors("Invalid ID", 400);
+
+// Duplicate key error (e.g. title or email)
 const handleDublicateDbData = (err) => {
   if (err.code === 11000) {
-    let field = "";
-
-    if (err.keyPattern.title) {
-      field = "title";
-    }
-    if (err.keyPattern.email) {
-      field = "email";
-    }
-
+    let field = Object.keys(err.keyPattern)[0];
     return new appErrors(
       `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`,
       400
     );
-  } else {
-    return new appErrors(err.message, 400);
   }
+  return new appErrors(err.message, 400);
 };
 
-// validation errors
-const handleValidationError = (err, res) => {
+// Mongoose validation error
+const handleValidationError = (err) => {
   let errors = [];
-  if (err.errors) {
-    const errorsObject = err.errors;
 
-    Object.keys(errorsObject).forEach((key) => {
-      errors.push({ [key]: errorsObject[key].properties.message });
+  if (err.errors) {
+    const errorFields = err.errors;
+    Object.keys(errorFields).forEach((key) => {
+      errors.push({ [key]: errorFields[key].properties.message });
     });
   }
 
-  if (errors?.length > 0) {
+  if (errors.length > 0) {
     return new appErrors(errors, 400);
   }
+
+  return new appErrors("Validation error", 400);
 };
-// for producation errors
-const handleProducationErrors = (err, res) => {
-  if (err.isOperational) {
-    res.status(err.statusCode).json({ errors: err.message });
-  } else {
-    res.status(err.statusCode).json({ errors: err.message });
-  }
+
+// Cloudinary-specific error (custom)
+const handleCloudinaryError = (err) => {
+  return new appErrors(err.message, 500);
 };
-// for development errors
+
+// Production error handler (minimal response)
+const handleProductionErrors = (err, res) => {
+  res.status(err.statusCode).json({ errors: err.message });
+};
+
+// Development error handler (detailed)
 const handleDevErrors = (err, res) => {
   res.status(err.statusCode).json({
-    message: err.message,
-    errors: err.errors,
+    errors: err.message,
+    error_details: err.errors,
+    stack: err.stack,
   });
 };
 
+// Main global error handler middleware
 const globalErrors = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
+
   if (process.env.NODE_ENV === "production") {
-    let error = err;
-    if (err.message.includes("Cast to ObjectId failed for value")) {
+    let error = { ...err };
+    error.message = err.message;
+
+    if (
+      typeof error.message === "string" &&
+      error.message.includes("Cast to ObjectId failed")
+    ) {
       error = handleInvalidId();
     }
-    if (err.code === 11000 || error?.message?.includes("unique")) {
+
+    if (
+      error.code === 11000 ||
+      (typeof error.message === "string" && error.message.includes("unique"))
+    ) {
       error = handleDublicateDbData(err);
     }
+
+    // JWT
     if (
-      error?.name === "JsonWebTokenError" ||
-      error?.name === "invalid signature"
+      error.name === "JsonWebTokenError" ||
+      error.message === "invalid signature"
     ) {
       error = handleJWTError();
     }
-    if (
-      error?.errors?.email?.name === "ValidatorError" ||
-      error?.errors?.password?.path == "password"
-    ) {
-      error = handleValidationError(error, res);
+
+    // Expired JWT
+    if (error.name === "TokenExpiredError") {
+      error = handleExpireJWTError();
     }
 
-    if (error.name === "TokenExpiredError") error = handleExpireJWTError();
-    handleProducationErrors(error, res);
+    // Mongoose validation
+    if (
+      error.errors?.email?.name === "ValidatorError" ||
+      error.errors?.password?.path === "password"
+    ) {
+      error = handleValidationError(error);
+    }
+
+    // Cloudinary image upload failure
+    if (
+      typeof error.message === "object" &&
+      error.message?.image?.includes("Failed to upload image")
+    ) {
+      error = handleCloudinaryError(error);
+    }
+
+    handleProductionErrors(error, res);
   } else {
     handleDevErrors(err, res);
   }
+
   next();
 };
+
 export default globalErrors;
