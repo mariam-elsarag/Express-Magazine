@@ -29,7 +29,7 @@ export const createNewCategory = asyncWraper(async (req, res, next) => {
     );
   }
   filterData.icon = await uploadSingleImage(
-    req,
+    req.file.buffer,
     "/mediafiles/categories",
     "icon"
   );
@@ -82,7 +82,7 @@ export const updateCategory = asyncWraper(async (req, res, next) => {
       }
 
       category.icon = await uploadSingleImage(
-        req,
+        req.file.buffer,
         "/mediafiles/categories",
         "icon"
       );

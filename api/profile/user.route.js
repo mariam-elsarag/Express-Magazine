@@ -8,11 +8,13 @@ import {
   getUserPosts,
   profileData,
   updateProfileData,
+  myPosts,
 } from "./user.controller.js";
 
 // routs
 import saveRoutes from "../saved/save.route.js";
 import upload from "../../middleware/multer.js";
+import { statForProfilePosts } from "../rating/rating.controller.js";
 const router = express.Router({ mergeParams: true });
 
 // routes
@@ -31,5 +33,7 @@ router.route("/").patch(
   updateProfileData
 );
 
+router.route("/post").get(myPosts);
+router.route("/post-statistics").get(statForProfilePosts);
 router.use(saveRoutes);
 export default router;

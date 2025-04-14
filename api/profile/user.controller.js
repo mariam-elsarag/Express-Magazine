@@ -81,3 +81,26 @@ export const updateProfileData = asyncWraper(async (req, res, next) => {
   }
   res.status(200).json({});
 });
+
+// get user posts
+export const myPosts = asyncWraper(async (req, res, next) => {
+  const user = req.user._id;
+  const userPosts = await Post.find({ user })
+    .limit(4)
+    .sort({ createdAt: -1 })
+    .populate({ path: "category", select: "title" });
+  const adjustData = userPosts.map((post) => {
+    return {
+      post_id: post._id,
+
+      category: {
+        title: post.category.title,
+      },
+      title: post.title,
+      image: post.image,
+      views: post.views,
+      rating: post.rating_average,
+    };
+  });
+  res.status(200).json(adjustData);
+});

@@ -22,7 +22,7 @@ export const createPost = asyncWraper(async (req, res, next) => {
   } else {
     try {
       filterData.image = await uploadSingleImage(
-        req,
+        req.file.buffer,
         "/mediafiles/posts",
         "image"
       );

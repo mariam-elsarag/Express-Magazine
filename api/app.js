@@ -18,6 +18,7 @@ import authRoutes from "./auth/auth.route.js";
 import postRoutes from "./post/post.route.js";
 import categoryRoutes from "./category/category.route.js";
 import profileRoutes from "./profile/user.route.js";
+import homeRoutes from "./home/home.route.js";
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/category", categoryRoutes);
 app.use("/api/post", postRoutes);
 app.use("/api/user", profileRoutes);
+app.use("/api/home", homeRoutes);
 
 // for handle wrong routes
 app.all("*", (req, res, next) => {
