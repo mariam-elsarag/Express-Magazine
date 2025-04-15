@@ -5,6 +5,7 @@ import asyncWraper from "../../utils/asyncWraper.js";
 import serializeBody from "../../utils/serializeBody.js";
 import { uploadSingleImage } from "../../utils/uploadImage.js";
 import ApiFeature from "../../utils/apiFeatures.js";
+import { getViewCache, setViewCache } from "../../config/cashManager.js";
 
 // create new post
 export const createPost = asyncWraper(async (req, res, next) => {
@@ -72,9 +73,17 @@ export const updatePost = asyncWraper(async (req, res, next) => {
 // view post
 export const viewPost = asyncWraper(async (req, res, next) => {
   const { id } = req.params;
+  const userIp = req.ip;
+  const key = `viewed:${id}:${userIp}`;
+  const now = Date.now();
+  const alreadyViewedAt = getViewCache(key);
+  if (alreadyViewedAt && now - alreadyViewedAt < 3600000) {
+    return res.status(200).json({ message: "View already counted recently" });
+  }
+  setViewCache(key, now);
   const post = await Post.findByIdAndUpdate(id, {
     $inc: { views: 1 },
   });
   if (!post) return next(new appErrors("Post not found", 404));
-  res.status(200).json({ message: "Post updated" });
+  res.status(200).json({ message: "Post updated", views: post.views });
 });

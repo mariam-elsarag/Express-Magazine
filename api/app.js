@@ -7,8 +7,6 @@ import xss from "xss-clean";
 import hpp from "hpp";
 import mongoSanitize from "express-mongo-sanitize";
 
-// routes
-
 // for handle global errors
 import globalErrors from "../middleware/globalErrors.js";
 import appErrors from "../utils/appErrors.js";
