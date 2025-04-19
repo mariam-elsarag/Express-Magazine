@@ -75,15 +75,40 @@ export const viewPost = asyncWraper(async (req, res, next) => {
   const { id } = req.params;
   const userIp = req.ip;
   const key = `viewed:${id}:${userIp}`;
+  const cachedAt = getViewCache(key);
+
   const now = Date.now();
-  const alreadyViewedAt = getViewCache(key);
-  if (alreadyViewedAt && now - alreadyViewedAt < 3600000) {
+  if (cachedAt && now - cachedAt < 3600000) {
     return res.status(200).json({ message: "View already counted recently" });
   }
+
   setViewCache(key, now);
-  const post = await Post.findByIdAndUpdate(id, {
-    $inc: { views: 1 },
-  });
+
+  const date = new Date();
+  const year = date.getFullYear();
+  const monthName = date.toLocaleString("default", { month: "long" });
+  const yearMonth = `${year}-${monthName}`;
+
+  const post = await Post.findByIdAndUpdate(
+    id,
+    {
+      $inc: {
+        [`viewsByMonth.${yearMonth}`]: 1,
+        views: 1,
+      },
+    },
+    { new: true }
+  );
+
   if (!post) return next(new appErrors("Post not found", 404));
+  const currentYear = new Date().getFullYear().toString();
+  if (post.viewsByMonth instanceof Map) {
+    for (const [key, value] of post.viewsByMonth.entries()) {
+      if (key < currentYear) {
+        post.viewsByMonth.delete(key);
+      }
+    }
+  }
+  await post.save();
   res.status(200).json({ message: "Post updated", views: post.views });
 });

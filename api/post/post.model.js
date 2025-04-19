@@ -28,6 +28,11 @@ const postSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    viewsByMonth: {
+      type: Map,
+      of: Number,
+      default: {},
+    },
     rating_quentity: {
       type: Number,
       default: 0,

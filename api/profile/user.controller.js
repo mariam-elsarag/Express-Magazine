@@ -4,6 +4,7 @@ import asyncWraper from "../../utils/asyncWraper.js";
 import serializeBody from "../../utils/serializeBody.js";
 import { uploadMultipleImages } from "../../utils/uploadImage.js";
 import Post from "../post/post.model.js";
+import Rate from "../rating/rate.model.js";
 import User from "./user.model.js";
 
 export const userData = asyncWraper(async (req, res, next) => {
@@ -103,4 +104,92 @@ export const myPosts = asyncWraper(async (req, res, next) => {
     };
   });
   res.status(200).json(adjustData);
+});
+
+// stat for posts rate
+export const statForProfilePosts = asyncWraper(async (req, res, next) => {
+  const user = req.user._id;
+
+  try {
+    const startOfYear = new Date(new Date().getFullYear(), 0, 1);
+
+    // get all posts for this user that he made this year
+    const userPosts = await Post.find({
+      user,
+      createdAt: { $gte: startOfYear },
+    });
+
+    const monthlyRates = {};
+
+    await Promise.all(
+      userPosts.map(async (post) => {
+        const postId = post._id;
+
+        // get all rates for the post
+        const postRates = await Rate.find({ post: postId });
+
+        postRates.forEach((rate) => {
+          const rateDate = new Date(rate.createdAt);
+          const month = rateDate.getMonth() + 1;
+          if (!monthlyRates[month]) {
+            monthlyRates[month] = [];
+          }
+
+          monthlyRates[month].push(rate.rate);
+        });
+      })
+    );
+
+    // Calculate monthly average from all rates
+    const finalMonthlyRates = Object.keys(monthlyRates).map((month) => {
+      const rates = monthlyRates[month];
+      const avg = rates.reduce((sum, rate) => sum + rate, 0) / rates.length;
+      return {
+        month,
+        averageRate: parseFloat(avg.toFixed(2)),
+      };
+    });
+
+    res.status(200).json(finalMonthlyRates);
+  } catch (err) {
+    next(new appErrors(err, 500));
+  }
+});
+
+// stati for posts views
+export const statForPostsViews = asyncWraper(async (req, res, next) => {
+  const user = req.user._id;
+  const months = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  const allUserPosts = await Post.find({ user });
+  const data = new Array(12).fill(0);
+  const currentYear = new Date().getFullYear().toString();
+  allUserPosts.forEach((post) => {
+    const viewsByMonth = post.viewsByMonth || new Map();
+    for (const [key, value] of viewsByMonth.entries()) {
+      if (key.startsWith(currentYear)) {
+        const [, monthName] = key.split("-");
+        const monthIndex = months.findIndex(
+          (m) => m.toLowerCase() === monthName.toLowerCase()
+        );
+
+        if (monthIndex !== -1) {
+          data[monthIndex] += value;
+        }
+      }
+    }
+  });
+  res.status(200).json({ labels: months, data });
 });
