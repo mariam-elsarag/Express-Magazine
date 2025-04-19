@@ -1,9 +1,9 @@
 import express from "express";
 
 // controller
-import { footbalNewsApi } from "./home.controller.js";
+import { popularPosts } from "./home.controller.js";
 
 const router = express.Router();
 
-router.route("/football-news").get(footbalNewsApi);
+router.route("/post/most-viewed").get(popularPosts);
 export default router;
