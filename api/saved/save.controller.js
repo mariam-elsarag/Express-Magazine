@@ -24,7 +24,19 @@ export const userSavedPosts = asyncWraper(async (req, res, next) => {
 
   const savedPosts = await featurs.getPaginations(Save, req);
   savedPosts.results = savedPosts?.results?.map((post) => ({
-    ...post.toJSON(),
+    user: {
+      full_name: post.user.full_name,
+      avatar: post.user.avatar,
+      userId: post.user._id,
+    },
+    post_id: post._id,
+    title: post.post.title,
+    image: post.post.image,
+    createdAt: new Date(post.post.createdAt).toLocaleDateString("en-us", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }),
     is_saved: true,
   }));
   res.status(200).json(savedPosts);

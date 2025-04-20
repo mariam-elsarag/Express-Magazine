@@ -3,8 +3,11 @@ import Post from "./post.model.js";
 import appErrors from "../../utils/appErrors.js";
 import asyncWraper from "../../utils/asyncWraper.js";
 import serializeBody from "../../utils/serializeBody.js";
-import { uploadSingleImage } from "../../utils/uploadImage.js";
-import ApiFeature from "../../utils/apiFeatures.js";
+import {
+  deleteSignleImage,
+  uploadSingleImage,
+} from "../../utils/uploadImage.js";
+
 import { getViewCache, setViewCache } from "../../config/cashManager.js";
 
 // create new post
@@ -52,22 +55,67 @@ export const createPost = asyncWraper(async (req, res, next) => {
 
 // update post
 export const updatePost = asyncWraper(async (req, res, next) => {
+  const user = req.user._id;
   const allowedFields = ["title", "description", "tags", "summary", "category"];
   const filterData = serializeBody(req.body, next, [], allowedFields);
   if (!filterData) {
     return;
   }
   const { id } = req.params;
-  const post = await Post.findById(id);
+  const post = await Post.findOne({ user: user, _id: id }).populate([
+    {
+      path: "user",
+      select: "full_name avatar _id",
+    },
+    { path: "category", select: "title _id" },
+  ]);
   if (!post) return next(new appErrors("Post not found", 404));
   if (req.file) {
-    filterData.image = await uploadImage(req, "/mediafiles/posts", "image");
+    await deleteSignleImage(post.image);
+    filterData.image = await uploadSingleImage(
+      req.file.buffer,
+      "/mediafiles/posts",
+      "image"
+    );
   }
-  Object.keys(filterData).forEach((key) => {
-    post[key] = filterData[key];
-  });
-  const updatedPost = await post.save();
-  res.status(200).json(updatedPost);
+
+  if (Object.keys(filterData)?.length > 0) {
+    Object.keys(filterData).forEach((key) => {
+      post[key] = filterData[key];
+    });
+    const updatedPost = await post.save();
+    res.status(200).json({
+      post_id: updatedPost._id,
+      user: {
+        full_name: updatedPost.user.full_name,
+        avatar: updatedPost.user.avatar,
+        user_id: updatedPost.user._id,
+      },
+      category: {
+        categoryId: updatedPost.category._id,
+        title: updatedPost.category.title,
+      },
+      title: updatedPost.title,
+      image: updatedPost.image,
+      tags: updatedPost.tags?.length > 0 ? updatedPost.tags : null,
+    });
+  } else {
+    res.status(200).json({
+      post_id: post._id,
+      user: {
+        full_name: post.user.full_name,
+        avatar: post.user.avatar,
+        user_id: post.user._id,
+      },
+      category: {
+        categoryId: post.category._id,
+        title: post.category.title,
+      },
+      title: post.title,
+      image: post.image,
+      tags: post.tags?.length > 0 ? post.tags : null,
+    });
+  }
 });
 
 // view post

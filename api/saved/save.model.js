@@ -31,7 +31,7 @@ saveSchema.pre("find", function (next) {
   });
   this.populate({
     path: "post",
-    select: "title summary image",
+    select: "title summary image createdAt",
   });
   next();
 });

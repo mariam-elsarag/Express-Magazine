@@ -49,3 +49,19 @@ export const uploadMultipleImages = async (req, folderName, fields = []) => {
 
   return uploadedImages;
 };
+
+export const deleteSignleImage = async (item) => {
+  try {
+    const publicId = item
+      .replace("https://res.cloudinary.com/dwlbskyfd/image/upload/", "") // Remove base URL
+      .replace(/v\d+\//, "")
+      .replace(/\.[^/.]+$/, "");
+    const result = await cloudinary.api.delete_resources([publicId], {
+      type: "upload",
+      resource_type: "image",
+    });
+  } catch (err) {
+    console.log("failed to delete image", err);
+    return reject(new appErrors({ [field]: "Failed to delete image" }, 500));
+  }
+};
