@@ -114,7 +114,7 @@ userSchema.methods.checkChangePasswordAfterJWT = function (jwtTimestamp) {
   return passwordChangedTime > jwtTimestamp;
 };
 // for generating otp
-userSchema.methods.generateOTP = async function (expire = 10, user) {
+userSchema.methods.generateOTP = async function (expire = 2, user) {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const hashedOtp = await bcrypt.hash(otp, 12);
   user.otp = hashedOtp;

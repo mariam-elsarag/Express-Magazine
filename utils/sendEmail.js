@@ -33,7 +33,7 @@ class Email {
       const value = replacements[key];
       template = template.replace(new RegExp(`{{${key}}}`, "g"), value);
     });
-    await this.send(template, "OTP code (valid for 10 minutes)");
+    await this.send(template, "OTP code (valid for 2 minutes)");
   }
 
   async send(html, subject) {
