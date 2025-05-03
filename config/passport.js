@@ -18,7 +18,9 @@ passport.use(
             googleId: profile.id,
             email: profile.emails[0].value,
             full_name: profile.displayName,
-            avatar: profile.photos[0]?.value || "",
+            avatar:
+              profile.photos[0]?.value ||
+              `https://avatar.iran.liara.run/username?username=${profile.displayName}`,
           });
         }
         return done(null, user);

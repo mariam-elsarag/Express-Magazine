@@ -33,7 +33,7 @@ export const login = asyncWraper(async (req, res, next) => {
   const requiredFields = ["email", "password"];
   const filterdData = serializeBody(req.body, next, requiredFields);
   const user = await User.findOne({ email: filterdData.email }).select(
-    "password email full_name role"
+    "password email full_name role avatar"
   );
 
   if (!user) {
@@ -51,6 +51,7 @@ export const login = asyncWraper(async (req, res, next) => {
     return next(new appErrors("Wrong credentials", 401));
   }
   const token = await generateTokens(user, res);
+
   res.status(200).json({
     userId: user._id,
     full_name: user.full_name,
@@ -86,8 +87,16 @@ export const googleAuthorization = (req, res, next) => {
     }
 
     try {
-      const token = generateTokens(user, res);
-
+      const token = await generateTokens(user, res);
+      res.cookie("token", user.token, {
+        maxAge: 15 * 24 * 60 * 60 * 1000,
+      });
+      res.cookie("full_name", user.full_name, {
+        maxAge: 15 * 24 * 60 * 60 * 1000,
+      });
+      res.cookie("avatar", user.avatar, {
+        maxAge: 15 * 24 * 60 * 60 * 1000,
+      });
       res.redirect(`${process.env.CLIENT_URL}?token=${token}`);
     } catch (error) {
       return res.redirect(`${process.env.CLIENT_URL}/login`);
